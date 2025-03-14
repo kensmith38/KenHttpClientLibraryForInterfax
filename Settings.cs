@@ -22,6 +22,5 @@ namespace KenHttpClientLibraryForInterfax
         // These are for testing uploading in chunks without actually using a large file!
         //public const int ThresholdToUploadInChunks = 10000; // must always be less than 8 MB
         //public const int ChunkSize = 5000;
-
     }
 }
