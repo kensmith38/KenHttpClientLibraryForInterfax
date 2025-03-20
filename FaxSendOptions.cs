@@ -37,16 +37,13 @@ namespace KenHttpClientLibraryForInterfax
         }
         public Dictionary<string, string> ToDictionary()
         {
-            // urlencode pieces that may have special characters
-            string urlEncodedCsid = HttpUtility.UrlEncode(Csid);
-            string urlEncodedReference = HttpUtility.UrlEncode(Reference);
-            //
+            // See KenDesignNote.txt regarding urlencode/decode
             var options = new Dictionary<string, string>();
             if (PostponeTime.HasValue) options.Add("postponeTime", PostponeTime.Value.ToString("s") + "Z");
             if (RetriesToPerform != null) options.Add("retriesToPerform", RetriesToPerform.ToString());
-            if (!string.IsNullOrEmpty(Csid)) options.Add("csid", urlEncodedCsid);
+            if (!string.IsNullOrEmpty(Csid)) options.Add("csid", Csid);
             if (!string.IsNullOrEmpty(PageHeader)) options.Add("pageHeader", PageHeader);
-            if (!string.IsNullOrEmpty(Reference)) options.Add("reference", urlEncodedReference);
+            if (!string.IsNullOrEmpty(Reference)) options.Add("reference", Reference);
             if (!string.IsNullOrEmpty(ReplyAddress)) options.Add("replyAddress", ReplyAddress);
             if (!string.IsNullOrEmpty(PageSize)) options.Add("pageSize", PageSize);
             if (!string.IsNullOrEmpty(FitToPage)) options.Add("fitToPage", FitToPage);

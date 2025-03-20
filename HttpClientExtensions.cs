@@ -21,9 +21,7 @@ namespace KenHttpClientLibraryForInterfax
             // Authorization
             var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(username + ":" + password);
             string authToken = Convert.ToBase64String(plainTextBytes);
-            //httpClient = new HttpClient();
             httpClient.BaseAddress = new Uri(baseUrlForInterfax);
-            //HttpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", authToken);
         }
         /// <summary>
@@ -65,11 +63,12 @@ namespace KenHttpClientLibraryForInterfax
             // decode each item
             foreach (var details in listFaxDetails)
             {
-                // urldecode pieces that we urlencoded when we sent request to interfax
-                details.senderCSID = HttpUtility.UrlDecode(details.senderCSID);
-                details.contact = HttpUtility.UrlDecode(details.contact);
+                // 3/20/2025 Don't urlencode/urldecode; let HttpClient do it
+                // See KenDesignNote.txt regarding urlencode/decode
+                details.senderCSID =details.senderCSID;
+                details.contact = details.contact;
+                //..details.subject = details.subject;
                 details.subject = HttpUtility.UrlDecode(details.subject);
-
             }
             return listFaxDetails;
         }
@@ -137,7 +136,8 @@ namespace KenHttpClientLibraryForInterfax
         {
             string requestUri = "/outbound/faxes?";
             requestUri += $"faxNumber={faxNumber}";
-            requestUri += $"&contact={HttpUtility.UrlEncode(contact)}";
+            // See KenDesignNote.txt regarding urlencode/decode
+            requestUri += $"&contact={contact}";
             requestUri = requestUri.AddOptions(faxSendOptions);
             return SendFax(httpClient, requestUri, docFilepath);
         }
@@ -148,11 +148,7 @@ namespace KenHttpClientLibraryForInterfax
         public static long SendFaxToMultipleDestinations(this HttpClient httpClient,
             string docFilepath, List<FaxDestination> faxDestinations, FaxSendOptions faxSendOptions)
         {
-            // Tricky! Make sure we urlEncode all contact names
-            foreach (FaxDestination faxDestination in faxDestinations)
-            {
-                faxDestination.Contact = HttpUtility.UrlEncode(faxDestination.Contact);
-            }
+            // See KenDesignNote.txt regarding urlencode/decode
             string jsonArrayFaxDestinations = JsonSerializer.Serialize(faxDestinations);
             string requestUri = "/outbound/batches?";
             requestUri += $"list={jsonArrayFaxDestinations}";
