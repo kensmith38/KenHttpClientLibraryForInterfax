@@ -10,6 +10,8 @@ using System.Web;
 using System.Drawing;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text.Encodings.Web;
+using System.Text.Unicode;
 
 
 namespace KenHttpClientLibraryForInterfax
@@ -59,16 +61,6 @@ namespace KenHttpClientLibraryForInterfax
             else
             {
                 throw new Exception(response.StatusCode.ToString());
-            }
-            // decode each item
-            foreach (var details in listFaxDetails)
-            {
-                // 3/20/2025 Don't urlencode/urldecode; let HttpClient do it
-                // See KenDesignNote.txt regarding urlencode/decode
-                details.senderCSID =details.senderCSID;
-                details.contact = details.contact;
-                //..details.subject = details.subject;
-                details.subject = HttpUtility.UrlDecode(details.subject);
             }
             return listFaxDetails;
         }
@@ -121,12 +113,26 @@ namespace KenHttpClientLibraryForInterfax
             var optionsDictionary = options.ToDictionary();
             if (optionsDictionary.Keys.Count == 0) return requestUri;
 
+            // 3/27/2025 Tricky! HttpUtility.ParseQueryString uses HttpUtility.UrlEncodeUnicode internally which causes problems.
+            // Reference: https://learn.microsoft.com/en-us/dotnet/api/system.web.httputility.urlencodeunicode?view=net-9.0
+            // Reference: https://stackoverflow.com/questions/26789168/httputility-parsequerystring-always-encodes-special-characters-to-unicode
+            // In a nutshell, Información Económica gets converted to Informaci%u00f3n+Econ%u00f3mica
+            // but it should be: Informaci%c3%b3n%2bEcon%c3%b3mica
+            // Note: \u00f3 is the same character as UTF-8 0xc3b3 but Interfax has trouble with the \u00f3 format!
+            // Thus we cannot use ParseQueryString for Reference/Subject; no other parms will have unicode characters!
+            /*
             var queryString = HttpUtility.ParseQueryString(string.Empty);
             foreach (var key in optionsDictionary.Keys)
                 queryString[key] = optionsDictionary[key];
             return $"{requestUri}&{queryString}";
+            */
+            string queryString = string.Empty;
+            foreach (var key in optionsDictionary.Keys)
+            {
+                queryString += $"&{key}={HttpUtility.UrlEncode(optionsDictionary[key])}";
+            }
+            return $"{requestUri}{queryString}";
         }
-
         /// <summary>
         /// Send a fax (size < 8 MB) to a single destination.
         /// A long value (faxID) is returned identifying the fax resource.
@@ -135,9 +141,9 @@ namespace KenHttpClientLibraryForInterfax
             string docFilepath, string contact, string faxNumber, FaxSendOptions faxSendOptions)
         {
             string requestUri = "/outbound/faxes?";
-            requestUri += $"faxNumber={faxNumber}";
-            // See KenDesignNote.txt regarding urlencode/decode
-            requestUri += $"&contact={contact}";
+            // All query parameters must be urlencoded.
+            requestUri += $"faxNumber={HttpUtility.UrlEncode(faxNumber)}";
+            requestUri += $"&contact={HttpUtility.UrlEncode(contact)}";
             requestUri = requestUri.AddOptions(faxSendOptions);
             return SendFax(httpClient, requestUri, docFilepath);
         }
@@ -148,8 +154,16 @@ namespace KenHttpClientLibraryForInterfax
         public static long SendFaxToMultipleDestinations(this HttpClient httpClient,
             string docFilepath, List<FaxDestination> faxDestinations, FaxSendOptions faxSendOptions)
         {
-            // See KenDesignNote.txt regarding urlencode/decode
-            string jsonArrayFaxDestinations = JsonSerializer.Serialize(faxDestinations);
+            // All query parameters must be urlencoded.
+            // Tricky! We don't want JsonSerializer to do anything except convert our class object into json!
+            //         So we use UnsafeRelaxedJsonEscaping!
+            //         Subsequently we use HttpUtility.UrlEncode to get everything encoded (with utf-8)!
+            var jsonOptions = new JsonSerializerOptions
+            {
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            };
+            string jsonArrayFaxDestinations = JsonSerializer.Serialize(faxDestinations,jsonOptions);
+            jsonArrayFaxDestinations = HttpUtility.UrlEncode(jsonArrayFaxDestinations);
             string requestUri = "/outbound/batches?";
             requestUri += $"list={jsonArrayFaxDestinations}";
             requestUri = requestUri.AddOptions(faxSendOptions);

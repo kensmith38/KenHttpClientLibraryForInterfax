@@ -1,3 +1,0 @@
-﻿// HttpUtility.ParseQueryString will perform urlencoding for us when it builds the query parameters
-// and everything gets urldecoded properly EXCEPT Subject (a.k.a. Reference)!
-// So, this app will not urlencode anything, but will urldecode Subject.
