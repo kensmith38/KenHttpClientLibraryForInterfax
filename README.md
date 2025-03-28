@@ -1,5 +1,8 @@
 <h1>KenHttpClientLibraryForInterfax is a library for sending faxes using Interfax's REST API. </h1>
 
+**YouTube video**<br> This video demonstrates the functionality of KenHttpClientLibraryForInterfax.<br>
+https://youtu.be/3xHhg4TFuqc
+
 **Design:** <br>
 1. Ken used a lot of the code, techniques, and concepts in Interfax's official Library (InterFAX.NET) which is found on GitHub.<br>
 2. KenHttpClientLibraryForInterfax supports only "outbound" faxes (and "batches"); there is no support for "inbound" faxes.<br>
